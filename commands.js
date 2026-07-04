@@ -226,8 +226,7 @@ commands.playMovie = function(info){
 	Sburb.playMovie(Sburb.assets[params[0]]);
 	if(params.length>0){
 		var interval = setInterval(function(){
-			var movie = window.document.getElementById("movie"+params[0]);
-			if(movie && (!movie.CurrentFrame || movie.CurrentFrame()>=4)){
+			if(!Sburb.assets[params[0]].finished){
 				clearInterval(interval);
 				commands.playSong(info.substring(info.indexOf(",")+1,info.length));
 			}

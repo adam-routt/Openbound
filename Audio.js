@@ -38,7 +38,9 @@ Sburb.Sound.prototype.play = function(pos) {
         this.asset.currentTime = pos; 
     }
 	this.fixVolume();
-	this.asset.play();	
+    try {
+        this.asset.play();
+    } catch (E) {}
 }
 
 //pause this sound

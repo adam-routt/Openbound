@@ -47,6 +47,17 @@ Sburb.AssetManager = function() {
         "swf": "application/x-shockwave-flash",
         "flv": "application/x-shockwave-flash"
     };
+    this.rufflePlayer = null;
+
+    window.RufflePlayer.config = {
+        wmode: 'transparent',
+        letterbox: 'on',
+        autoplay: 'on',
+        splashScreen: false,
+        scale: 'showall',
+    }
+    const ruffle = window.RufflePlayer.newest();
+    this.rufflePlayer = ruffle.createPlayer();
 }
 
 Sburb.AssetManager.prototype.start = function() {
@@ -695,14 +706,29 @@ Sburb.createMovieAsset = function(name,path){
     ret.name = name;
     ret.type = "movie";
     ret.originalVals = path;
-    
+    ret.finished = false;
     ret.done = function(url) {
         ret.src = url;
-        document.getElementById("SBURBmovieBin").innerHTML += '<div id="'+name+'"><object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://fpdownload.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" id="movie" width="'+Sburb.Stage.width+'" height="'+Sburb.Stage.height+'"><param name="allowScriptAccess" value="always" /\><param name="wmode" value="transparent"/\><param name="movie" value="'+ret.src+'" /\><param name="quality" value="high" /\><embed src="'+ret.src+'" quality="high" WMODE="transparent" width="'+Sburb.Stage.width+'" height="'+Sburb.Stage.height+'" swLiveConnect="true" id="movie'+name+'" name="movie'+name+'" allowScriptAccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" /\></object></div>';
+        document.getElementById("SBURBmovieBin").innerHTML += '<div id="' + name + '"><object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" :class="{\'bg-white\' : !transparent}" id="movie" width="' + Sburb.Stage.width + '" height="' + Sburb.Stage.height + '"></object></div>'
+
+        rufflePlayer = Sburb.assetManager.rufflePlayer
+        rufflePlayer.style.height = Sburb.Stage.height + 'px'
+        rufflePlayer.style.width = Sburb.Stage.width + 'px'
+        container = document.getElementById("movie");
+        container.appendChild(rufflePlayer)
+
+        rufflePlayer.addEventListener('loadedmetadata', () => {
+            const metadata = rufflePlayer.ruffle().metadata;
+            // A hacky way to end the clip or else it'll start looping. A better way is probably to get the timer, make sure that its paused when the focus isn't on the current tab and calculate the elapsed time from that and tie an event listener to that but that's way more work.
+            setTimeout(ret.finish, (metadata.numFrames - 18) / metadata.frameRate * 1000, rufflePlayer)
+        })
+        rufflePlayer.ruffle().load(ret.src);
+
         document.getElementById(name).style.display = "none";
     }
     ret.success = function(url) { ret.done(url); ret.loaded = true; };
     ret.failure = function() { ret.failed = true; };
+    ret.finish = function(rufflePlayer) { rufflePlayer.remove(); ret.finished = true; };
     ret.assetOnLoadFunction = function(fn) {
         if(ret.loaded) {
             if(fn) { fn(); }
