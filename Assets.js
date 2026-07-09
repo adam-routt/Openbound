@@ -118,12 +118,14 @@ var Sburb = (function (Sburb) {
     var audioPercent = this.audioFilesLoaded / this.audioFileCount || 0;
     var percent = 0;
     if (this.totalSize && this.totalMeta >= this.totalAssets) {
-      percent =
-        Math.floor((this.loadedSize / this.totalSize) * 70) + audioPercent * 30;
+      percent = Math.round(
+        Math.floor((this.loadedSize / this.totalSize) * 70) + audioPercent * 30,
+      );
     } else {
-      percent =
+      percent = Math.round(
         Math.floor((this.totalLoaded / this.totalAssets) * 70) +
-        audioPercent * 30;
+          audioPercent * 30,
+      );
     }
     if (percent >= 70) {
       Sburb.assetManager.loadingDescription = "Preparing audio... ";
@@ -773,10 +775,6 @@ var Sburb = (function (Sburb) {
         ret.addEventListener("error", function () {
           delete Sburb.assetManager.recurrences[name];
           ret.failure();
-        });
-        ret.addEventListener("loadstart", function () {
-          Sburb.assetManager.loadingDescription =
-            "Waiting for audio metadata... ";
         });
         if (!notBlob) {
           Sburb.assetManager.recurrences[name] = setTimeout(function () {
