@@ -3,7 +3,7 @@ terser Sburb.js -o Sburb.min.js --compress --mangle
 cp index.html index_dev.html
 rm index.html
 cp index_production.html index.html
-powershell.exe -Command "Compress-Archive -Force -Path Sburb.min.js,index.html,README-ownership-liscensing.txt,resources,levels -DestinationPath Jterniabound.zip"
+powershell.exe -Command "Compress-Archive -Force -Path Sburb.min.js,index.html,README.md,resources,levels -DestinationPath Jterniabound.zip"
 rm index.html
 cp index_dev.html index.html
 rm index_dev.html

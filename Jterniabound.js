@@ -123,8 +123,8 @@ var Sburb = (function (Sburb) {
   Sburb.waitFor = null;
   Sburb.engineMode = "wander";
   Sburb.fading = false;
-  Sburb.lastMusicTime = -1;
-  Sburb.musicStoppedFor = 0;
+  //Sburb.lastMusicTime = -1;
+  //Sburb.musicStoppedFor = 0;
   Sburb.loadingRoom = false; // Only load one room at a time
   Sburb.tests = null;
   Sburb.prefixed = null;
@@ -395,6 +395,9 @@ var Sburb = (function (Sburb) {
     gameCanvas.onmousedown = function (e) {
       Sburb.onMouseDown(e, this);
     };
+    gameCanvas.ontouchstart = function (e) {
+      Sburb.onTouch(e, this);
+    };
     gameCanvas.onmouseup = function (e) {
       Sburb.onMouseUp(e, this);
     };
@@ -529,6 +532,7 @@ var Sburb = (function (Sburb) {
   }
 
   var _onkeydown = function (e) {
+    Sburb.unlockAudio();
     if (Sburb.updateLoop && !Sburb.inputDisabled) {
       // Make sure we are loaded before trying to do things
       if (Sburb.chooser.choosing) {
@@ -615,7 +619,28 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.onMouseDown = function (e, canvas) {
+    Sburb.unlockAudio();
     if (!Sburb.updateLoop) return; // Make sure we are loaded before trying to do things
+    if (Sburb.engineMode == "strife" && hasControl()) {
+      Sburb.chooser.choices = Sburb.curRoom.queryActionsVisual(
+        Sburb.char,
+        Sburb.Stage.x + Sburb.Mouse.x,
+        Sburb.Stage.y + Sburb.Mouse.y,
+      );
+      if (Sburb.chooser.choices.length > 0) {
+        Sburb.chooser.choices.push(
+          new Sburb.Action("cancel", "cancel", "cancel"),
+        );
+        beginChoosing();
+      }
+    }
+    Sburb.Mouse.down = true;
+  };
+
+  Sburb.onTouch = function (e, canvas) {
+    Sburb.unlockAudio();
+    Sburb.onMouseMove(e.targetTouches[0], canvas);
+    if (!Sburb.updateLoop) return;
     if (Sburb.engineMode == "strife" && hasControl()) {
       Sburb.chooser.choices = Sburb.curRoom.queryActionsVisual(
         Sburb.char,
@@ -657,6 +682,10 @@ var Sburb = (function (Sburb) {
     } while ((currentElement = currentElement.offsetParent));
     canvasX = event.pageX - totalOffsetX;
     canvasY = event.pageY - totalOffsetY;
+    var gameScale =
+      parseFloat(canvas.getAttribute("width")) / parseFloat(canvas.style.width);
+    canvasX *= gameScale;
+    canvasY *= gameScale;
     return { x: canvasX, y: canvasY };
   }
 
@@ -664,26 +693,10 @@ var Sburb = (function (Sburb) {
     if (Sburb.bgm && Sburb.bgm.asset) {
       if (
         Sburb.bgm.asset.ended ||
-        Sburb.bgm.asset.currentTime >= Sburb.bgm.asset.duration
+        Sburb.bgm.asset.currentTime >= Sburb.bgm.asset.endLoop - 0.05
       ) {
-        Sburb.bgm.loop();
+        Sburb.bgm.asset.currentTime = Sburb.bgm.asset.startLoop;
       }
-      if (Sburb.lastMusicTime == Sburb.bgm.asset.currentTime) {
-        Sburb.musicStoppedFor++;
-        if (Sburb.musicStoppedFor > 4) {
-          Sburb.bgm.asset.pause();
-          Sburb.bgm.asset.play(); // asset.play() because sometimes this condition is true on startup
-        }
-      } else {
-        Sburb.musicStoppedFor = 0;
-      }
-      if (Sburb.bgm.asset.paused) {
-        //	console.log("The sound is paused??? THIS SHOULD NOT BE.");
-        Sburb.bgm.play();
-      }
-      Sburb.lastMusicTime = Sburb.bgm.asset.currentTime;
-    } else {
-      //console.log("The music doesn't exist!");
     }
   }
 
@@ -971,6 +984,10 @@ var Sburb = (function (Sburb) {
       }
       Sburb.bgm = newSong;
       Sburb.bgm.stop();
+      if (!Sburb.audioUnlocked) {
+        Sburb.queuePendingAudio(newSong);
+        return;
+      }
       Sburb.bgm.play();
     }
   };
@@ -980,6 +997,7 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.playSound = function (sound) {
+    if (!Sburb.audioUnlocked) return;
     sound.stop();
     sound.play();
   };
@@ -989,6 +1007,13 @@ var Sburb = (function (Sburb) {
     document.getElementById(name).style.display = "block";
     Sburb.waitFor = new Sburb.Trigger("movie," + name + ",5");
     Sburb.playingMovie = true;
+  };
+
+  Sburb.retryPendingAudio = function () {
+    while (Sburb.pendingAudio.length > 0) {
+      var sound = Sburb.pendingAudio.shift();
+      sound.play();
+    }
   };
 
   Sburb.startUpdateProcess = startUpdateProcess;

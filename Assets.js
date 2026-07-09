@@ -15,6 +15,9 @@ var Sburb = (function (Sburb) {
     this.totalMeta = 0; // Used in calculation of "Are we done yet?"
     this.totalSize = 0; // Used in progress bar
     this.loadedSize = 0; // Used in progress bar
+    this.audioFileCount = 0; // Used in progress bar
+    this.audioFilesLoaded = 0; // Used in progress bar
+    this.loadingDescription = "Loading assets... ";
     this.assets = {};
     this.loaded = {};
     this.recurrences = {};
@@ -112,14 +115,23 @@ var Sburb = (function (Sburb) {
     Sburb.stage.font = "10px Verdana";
     Sburb.stage.textAlign = "center";
     //Sburb.stage.fillText("Loading "+this.description,Stage.width/2,Stage.height-80);
+    var audioPercent = this.audioFilesLoaded / this.audioFileCount || 0;
     var percent = 0;
     if (this.totalSize && this.totalMeta >= this.totalAssets) {
-      percent = Math.floor((this.loadedSize / this.totalSize) * 100);
+      percent = Math.round(
+        Math.floor((this.loadedSize / this.totalSize) * 70) + audioPercent * 30,
+      );
     } else {
-      percent = Math.floor((this.totalLoaded / this.totalAssets) * 100);
+      percent = Math.round(
+        Math.floor((this.totalLoaded / this.totalAssets) * 70) +
+          audioPercent * 30,
+      );
+    }
+    if (percent >= 70) {
+      Sburb.assetManager.loadingDescription = "Preparing audio... ";
     }
     Sburb.stage.fillText(
-      percent + "%",
+      Sburb.assetManager.loadingDescription + percent + "%",
       Sburb.Stage.width / 2,
       Sburb.Stage.height - 50,
     );
@@ -170,6 +182,8 @@ var Sburb = (function (Sburb) {
     this.totalMeta = 0;
     this.totalSize = 0;
     this.loadedSize = 0;
+    this.audioFileCount = 0;
+    this.audioFilesLoaded = 0;
     this.assets = {};
     this.loaded = {};
     this.recurrences = {};
@@ -205,6 +219,8 @@ var Sburb = (function (Sburb) {
 
   //log that the asset was loaded
   Sburb.AssetManager.prototype.assetLoaded = function (name) {
+    clearTimeout(Sburb.assetManager.recurrences[name]);
+    delete Sburb.assetManager.recurrences[name];
     if (this.assets[name]) {
       if (!this.loaded[name]) {
         this.loaded[name] = true;
@@ -220,6 +236,8 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.AssetManager.prototype.assetFailed = function (name) {
+    clearTimeout(Sburb.assetManager.recurrences[name]);
+    delete Sburb.assetManager.recurrences[name];
     var msg = name + " failed to load";
     console.log(msg);
     this.error.push(msg);
@@ -673,7 +691,10 @@ var Sburb = (function (Sburb) {
     ret.name = name;
     ret.type = "audio";
     ret.preload = true;
+    ret.gainNodeRoute = null;
+    ret.pendingPlay = false;
     ret.originalVals = sources;
+    Sburb.assetManager.audioFileCount++;
     // Ajax Shenanigans
     // Load each source, call success or failure for each
     // On success, add as a source
@@ -693,13 +714,12 @@ var Sburb = (function (Sburb) {
           delete Sburb.assetManager.recurrences[name];
           ret.isLoaded();
         } else if (!ret.check_count) {
-          delete Sburb.assetManager.recurrences[name];
-          ret.failure();
+          //delete Sburb.assetManager.recurrences[name];
+          //ret.failure();
         } else {
-          Sburb.assetManager.recurrences[name] = setTimeout(
-            ret.checkLoaded,
-            ret.check_interval,
-          );
+          Sburb.assetManager.recurrences[name] = setTimeout(function () {
+            ret.checkLoaded();
+          }, ret.check_interval);
         }
       } else {
         delete Sburb.assetManager.recurrences[name];
@@ -738,18 +758,29 @@ var Sburb = (function (Sburb) {
       }
     };
     ret.success = function (url, id, notBlob) {
+      ret.innerHTML = "";
       var tmp = document.createElement("source");
       tmp.src = url;
       ret.appendChild(tmp);
       ret.remaining -= 1;
       if (!ret.remaining) {
-        if (window.chrome) ret.load();
-        ret.addEventListener("loadeddata", ret.isLoaded, false);
+        ret.load();
+        ret.addEventListener(
+          "loadedmetadata",
+          function () {
+            Sburb.assetManager.audioFilesLoaded++;
+            ret.isLoaded();
+          },
+          false,
+        );
+        ret.addEventListener("error", function () {
+          delete Sburb.assetManager.recurrences[name];
+          ret.failure();
+        });
         if (!notBlob) {
-          Sburb.assetManager.recurrences[name] = setTimeout(
-            ret.checkLoaded,
-            ret.check_interval,
-          );
+          Sburb.assetManager.recurrences[name] = setTimeout(function () {
+            ret.checkLoaded();
+          }, ret.check_interval);
         }
       }
     };
