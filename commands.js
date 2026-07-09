@@ -391,8 +391,8 @@ var Sburb = (function (Sburb) {
     } else {
       Sburb.globalVolume = 0.33;
     }
-    if (Sburb.bgm) {
-      Sburb.bgm.fixVolume();
+    if (Sburb.masterGain) {
+      Sburb.masterGain.gain.value = Sburb.globalVolume;
     }
   };
 
