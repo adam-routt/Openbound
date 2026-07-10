@@ -474,7 +474,6 @@ var Sburb = (function (Sburb) {
   }
 
   var _onkeydown = function (e) {
-    Sburb.unlockAudio();
     if (Sburb.updateLoop) {
       // Make sure we are loaded before trying to do things
       if (Sburb.chooser.choosing) {
@@ -561,7 +560,6 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.onMouseDown = function (e, canvas) {
-    Sburb.unlockAudio();
     if (!Sburb.updateLoop) return; // Make sure we are loaded before trying to do things
     if (Sburb.engineMode == "strife" && hasControl()) {
       Sburb.chooser.choices = Sburb.curRoom.queryActionsVisual(
@@ -580,7 +578,6 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.onTouch = function (e, canvas) {
-    Sburb.unlockAudio();
     Sburb.onMouseMove(e.targetTouches[0], canvas);
     if (!Sburb.updateLoop) return;
     if (Sburb.engineMode == "strife" && hasControl()) {
@@ -888,6 +885,17 @@ var Sburb = (function (Sburb) {
       var sound = Sburb.pendingAudio.shift();
       sound.play();
     }
+  };
+
+  Sburb.readyToPlay = function () {
+    Sburb.Stage.addEventListener(
+      "click",
+      async function () {
+        await Sburb.unlockAudio();
+        Sburb.startUpdateProcess();
+      },
+      { once: true },
+    );
   };
 
   Sburb.startUpdateProcess = startUpdateProcess;
