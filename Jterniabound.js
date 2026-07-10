@@ -474,7 +474,6 @@ var Sburb = (function (Sburb) {
   }
 
   var _onkeydown = function (e) {
-    Sburb.unlockAudio();
     if (Sburb.updateLoop) {
       // Make sure we are loaded before trying to do things
       if (Sburb.chooser.choosing) {
@@ -561,7 +560,6 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.onMouseDown = function (e, canvas) {
-    Sburb.unlockAudio();
     if (!Sburb.updateLoop) return; // Make sure we are loaded before trying to do things
     if (Sburb.engineMode == "strife" && hasControl()) {
       Sburb.chooser.choices = Sburb.curRoom.queryActionsVisual(
@@ -580,7 +578,6 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.onTouch = function (e, canvas) {
-    Sburb.unlockAudio();
     Sburb.onMouseMove(e.targetTouches[0], canvas);
     if (!Sburb.updateLoop) return;
     if (Sburb.engineMode == "strife" && hasControl()) {
@@ -888,6 +885,49 @@ var Sburb = (function (Sburb) {
       var sound = Sburb.pendingAudio.shift();
       sound.play();
     }
+  };
+
+  Sburb.readyToPlay = function () {
+    Sburb.Stage.addEventListener(
+      "click",
+      async function () {
+        await Sburb.unlockAudio();
+        document.getElementById("SBURBmovieBin").innerHTML +=
+          '<div id="' +
+          Sburb.assetManager.movieAssetRef.name +
+          '"><object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" :class="{\'bg-white\' : !transparent}" id="movie" width="' +
+          Sburb.Stage.width +
+          '" height="' +
+          Sburb.Stage.height +
+          '"></object></div>';
+
+        rufflePlayer = Sburb.assetManager.rufflePlayer;
+        rufflePlayer.style.height = Sburb.Stage.height + "px";
+        rufflePlayer.style.width = Sburb.Stage.width + "px";
+        container = document.getElementById("movie");
+        container.appendChild(rufflePlayer);
+
+        rufflePlayer.addEventListener("loadedmetadata", () => {
+          const metadata = rufflePlayer.ruffle().metadata;
+          // A hacky way to end the clip or else it'll start looping. A better way is probably to get the timer, make sure that its paused when the focus isn't on the current tab and calculate the elapsed time from that and tie an event listener to that but that's way more work.
+          setTimeout(
+            Sburb.assetManager.movieAssetRef.finish,
+            ((metadata.numFrames - 18) / metadata.frameRate) * 1000,
+            rufflePlayer,
+          );
+        });
+        rufflePlayer.ruffle().load(Sburb.assetManager.movieAssetRef.src);
+        document.getElementById(
+          Sburb.assetManager.movieAssetRef.name,
+        ).style.display = "none";
+
+        Sburb.startUpdateProcess();
+        if (Sburb.initAction) {
+          Sburb.performAction(Sburb.initAction);
+        }
+      },
+      { once: true },
+    );
   };
 
   Sburb.startUpdateProcess = startUpdateProcess;

@@ -127,7 +127,7 @@ var Sburb = (function (Sburb) {
   };
 
   Sburb.unlockAudio = async function () {
-    if (!Sburb.audioUnlocked && Sburb.bgm) {
+    if (!Sburb.audioUnlocked) {
       if (!Sburb.audioContext) {
         //create audio context with gain node
         var AudioContext = window.AudioContext || window.webkitAudioContext;

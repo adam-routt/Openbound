@@ -47,6 +47,7 @@ var Sburb = (function (Sburb) {
       flv: "application/x-shockwave-flash",
     };
     this.rufflePlayer = null;
+    this.movieAssetRef = null;
 
     window.RufflePlayer.config = {
       wmode: "transparent",
@@ -140,6 +141,9 @@ var Sburb = (function (Sburb) {
     }
     if (percent >= 70) {
       Sburb.assetManager.loadingDescription = "Preparing audio... ";
+    }
+    if (percent >= 100) {
+      Sburb.assetManager.loadingDescription = "Tap to start! ";
     }
     Sburb.stage.fillText(
       Sburb.assetManager.loadingDescription + percent + "%",
@@ -835,39 +839,6 @@ var Sburb = (function (Sburb) {
     ret.finished = false;
     ret.done = function (url) {
       ret.src = url;
-      document.getElementById("SBURBmovieBin").innerHTML +=
-        '<div id="' +
-        name +
-        '"><object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" :class="{\'bg-white\' : !transparent}" id="movie" width="' +
-        Sburb.Stage.width +
-        '" height="' +
-        Sburb.Stage.height +
-        '"></object></div>';
-
-      rufflePlayer = Sburb.assetManager.rufflePlayer;
-      rufflePlayer.style.height = Sburb.Stage.height + "px";
-      rufflePlayer.style.width = Sburb.Stage.width + "px";
-      container = document.getElementById("movie");
-      container.appendChild(rufflePlayer);
-
-      rufflePlayer.addEventListener("loadedmetadata", () => {
-        const metadata = rufflePlayer.ruffle().metadata;
-        // A hacky way to end the clip or else it'll start looping. A better way is probably to get the timer, make sure that its paused when the focus isn't on the current tab and calculate the elapsed time from that and tie an event listener to that but that's way more work.
-        setTimeout(
-          ret.finish,
-          ((metadata.numFrames - 18) / metadata.frameRate) * 1000,
-          rufflePlayer,
-        );
-      });
-      rufflePlayer.addEventListener("touchstart", () => {
-        Sburb.unlockAudio();
-      });
-      rufflePlayer.addEventListener("click", () => {
-        Sburb.unlockAudio();
-      });
-      rufflePlayer.ruffle().load(ret.src);
-
-      document.getElementById(name).style.display = "none";
     };
     ret.success = function (url) {
       ret.done(url);
@@ -877,8 +848,11 @@ var Sburb = (function (Sburb) {
       ret.failed = true;
     };
     ret.finish = function (rufflePlayer) {
-      rufflePlayer.remove();
       ret.finished = true;
+      setTimeout(ret.delete, 100, rufflePlayer);
+    };
+    ret.delete = function (rufflePlayer) {
+      rufflePlayer.remove();
     };
     ret.assetOnLoadFunction = function (fn) {
       if (ret.loaded) {
@@ -919,6 +893,7 @@ var Sburb = (function (Sburb) {
       Sburb.loadGenericAsset(ret, path);
     };
 
+    Sburb.assetManager.movieAssetRef = ret;
     ret.reload();
 
     return ret;
