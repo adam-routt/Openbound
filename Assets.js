@@ -130,6 +130,9 @@ var Sburb = (function (Sburb) {
     if (percent >= 70) {
       Sburb.assetManager.loadingDescription = "Preparing audio... ";
     }
+    if (percent >= 100) {
+      Sburb.assetManager.loadingDescription = "Tap to play! ";
+    }
     Sburb.stage.fillText(
       Sburb.assetManager.loadingDescription + percent + "%",
       Sburb.Stage.width / 2,
